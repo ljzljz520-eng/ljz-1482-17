@@ -1,27 +1,19 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import Layout from "./components/Layout";
-import AudioVisual from "./pages/AudioVisual";
-import Timeline from "./pages/Timeline";
-import ParkOverview from "./pages/ParkOverview";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from 'react-hot-toast';
+import { useAuth } from './store/auth';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import ErrorBoundary from './components/ErrorBoundary';
 
-const App = () => {
+export default function App() {
+  const { initialized, user, load } = useAuth();
+  if (!initialized) {
+    void load();
+    return <main className="grid min-h-screen place-items-center bg-slate-50 text-slate-500">正在验证服务端会话...</main>;
+  }
   return (
-    <BrowserRouter>
-      <ErrorBoundary>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<ParkOverview />} />
-            <Route path="/audiovisual" element={<AudioVisual />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster position="top-right" />
-        </Layout>
-      </ErrorBoundary>
-    </BrowserRouter>
+    <ErrorBoundary>
+      {user ? <Dashboard /> : <Login />}
+      <Toaster position="top-right" toastOptions={{ className: 'text-sm font-medium' }} />
+    </ErrorBoundary>
   );
-};
-
-export default App;
+}

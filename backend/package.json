@@ -1,0 +1,38 @@
+{
+  "name": "user-center-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "start": "prisma migrate deploy && node dist/prisma/seed.js && node dist/src/index.js"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "bcryptjs": "2.4.3",
+    "cors": "2.8.5",
+    "dotenv": "16.4.5",
+    "express": "4.21.1",
+    "jsonwebtoken": "9.0.2",
+    "pino": "9.5.0",
+    "pino-http": "10.3.0",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "@types/cors": "2.8.5",
+    "@types/express": "5.0.0",
+    "@types/jsonwebtoken": "9.0.7",
+    "@types/node": "20.17.6",
+    "prisma": "5.22.0",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3"
+  }
+}

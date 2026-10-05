@@ -1,10 +1,11 @@
-export const formatTime = (minutes: number) => {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${h}小时${m}分钟`;
+export const formatDate = (value?: string | Date | null) => {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
+  }).format(new Date(value));
 };
-
-export const formatVisitors = (num: number) => {
-  if (num > 10000) return `${(num / 10000).toFixed(1)}万`;
-  return `${num.toLocaleString()}人`;
+export const formatBytes = (value?: number | null) => {
+  if (!value) return '0 B';
+  if (value < 1024) return `${value} B`;
+  return `${(value / 1024).toFixed(1)} KB`;
 };

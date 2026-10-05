@@ -1,13 +1,40 @@
-version: "3.9"
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: usercenter
+      POSTGRES_PASSWORD: usercenter
+      POSTGRES_DB: usercenter
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U usercenter -d usercenter"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://usercenter:usercenter@db:5432/usercenter?schema=public
+      JWT_SECRET: demo-usercenter-secret
+      PORT: 8080
+      TASK_LEASE_SECONDS: "45"
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
   frontend:
     build: ./frontend
-    container_name: park-frontend
+    depends_on:
+      - backend
     ports:
-      - "3000:80"
-    restart: unless-stopped
-    networks:
-      - park-net
-networks:
-  park-net:
-    driver: bridge
+      - "3000:3000"
+
+volumes:
+  postgres_data:
