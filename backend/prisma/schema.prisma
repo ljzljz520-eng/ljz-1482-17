@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  LEFT
+}
+
+enum TemplateFollowMode {
+  PINNED
+  FOLLOWING
+}
+
+enum TaskStatus {
+  QUEUED
+  RUNNING
+  CANCELLING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum TaskScenario {
+  NORMAL
+  FAIL_ONCE
+  CANCEL_RACE
+  WORKER_LOST
+  STORAGE_FULL
+}
+
+enum LedgerType {
+  RESERVE
+  SETTLE
+  RELEASE
+}
+
+model Tenant {
+  id           String          @id @default(uuid())
+  name         String
+  slug         String          @unique
+  exportQuota  Int             @default(100)
+  storageLimit BigInt          @default(10737418240)
+  storageUsed  BigInt          @default(0)
+  createdAt    DateTime        @default(now())
+  users        User[]
+  memberships  Membership[]
+  account      BillingAccount?
+  projects     Project[]
+  templates    Template[]
+  visits       ProjectVisit[]
+  tasks        ExportTask[]
+  ledgers      BillingLedger[]
+}
+
+model User {
+  id              String             @id @default(uuid())
+  email           String             @unique
+  name            String
+  passwordHash    String
+  activeTenantId  String?
+  activeTenant    Tenant?            @relation(fields: [activeTenantId], references: [id])
+  createdAt       DateTime           @default(now())
+  memberships     Membership[]
+  favorites       TemplateFavorite[]
+  visits          ProjectVisit[]
+  createdProjects Project[]          @relation("ProjectCreator")
+  tasks           ExportTask[]
+}
+
+model Membership {
+  id       String           @id @default(uuid())
+  tenantId String
+  userId   String
+  role     Role             @default(MEMBER)
+  status   MembershipStatus @default(ACTIVE)
+  joinedAt DateTime         @default(now())
+  leftAt   DateTime?
+  tenant   Tenant           @relation(fields: [tenantId], references: [id])
+  user     User             @relation(fields: [userId], references: [id])
+
+  @@unique([tenantId, userId])
+  @@index([userId, status])
+}
+
+model BillingAccount {
+  id               String @id @default(uuid())
+  tenantId         String @unique
+  availableBalance Int
+  heldAmount       Int    @default(0)
+  consumedTotal    Int    @default(0)
+  version          Int    @default(0)
+  tenant           Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model BillingLedger {
+  id           String      @id @default(uuid())
+  tenantId     String
+  taskId       String?
+  entryKey     String      @unique
+  type         LedgerType
+  amount       Int
+  heldDelta    Int
+  balanceAfter Int
+  heldAfter    Int
+  note         String
+  createdAt    DateTime    @default(now())
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  task         ExportTask? @relation(fields: [taskId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([taskId])
+}
+
+model Project {
+  id                String           @id @default(uuid())
+  tenantId          String
+  name              String
+  summary           String
+  content           String           @default("")
+  createdById       String
+  templateId        String?
+  templateVersionId String?
+  templateSnapshot  String
+  deletedAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  creator           User             @relation("ProjectCreator", fields: [createdById], references: [id])
+  template          Template?        @relation(fields: [templateId], references: [id])
+  templateVersion   TemplateVersion? @relation("ProjectTemplateVersion", fields: [templateVersionId], references: [id])
+  visits            ProjectVisit[]
+  tasks             ExportTask[]
+
+  @@index([tenantId, deletedAt])
+}
+
+model Template {
+  id          String             @id @default(uuid())
+  tenantId    String
+  name        String
+  description String
+  deletedAt   DateTime?
+  createdAt   DateTime           @default(now())
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  versions    TemplateVersion[]
+  favorites   TemplateFavorite[]
+  projects    Project[]
+
+  @@index([tenantId, deletedAt])
+}
+
+model TemplateVersion {
+  id          String             @id @default(uuid())
+  templateId  String
+  version     String
+  changelog   String
+  publishedAt DateTime           @default(now())
+  template    Template           @relation(fields: [templateId], references: [id])
+  favorites   TemplateFavorite[] @relation("PinnedVersion")
+  projects    Project[]          @relation("ProjectTemplateVersion")
+
+  @@unique([templateId, version])
+}
+
+model TemplateFavorite {
+  id              String             @id @default(uuid())
+  userId          String
+  templateId      String
+  pinnedVersionId String?
+  mode            TemplateFollowMode @default(FOLLOWING)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  user            User               @relation(fields: [userId], references: [id])
+  template        Template           @relation(fields: [templateId], references: [id])
+  pinnedVersion   TemplateVersion?   @relation("PinnedVersion", fields: [pinnedVersionId], references: [id])
+
+  @@unique([userId, templateId])
+  @@index([templateId])
+}
+
+model ProjectVisit {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  projectId String
+  cursor    String
+  content   String
+  visitedAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, projectId])
+  @@index([tenantId])
+}
+
+model ExportTask {
+  id                String          @id @default(uuid())
+  tenantId          String
+  projectId         String
+  requestedById     String
+  clientRequestId   String          @unique
+  status            TaskStatus      @default(QUEUED)
+  scenario          TaskScenario    @default(NORMAL)
+  estimatedUnits    Int
+  actualUnits       Int?
+  attempt           Int             @default(0)
+  resultName        String?
+  resultUrl         String?
+  resultBytes       BigInt?
+  failureReason     String?
+  cancelRequestedAt DateTime?
+  workerId          String?
+  leasedAt          DateTime?
+  lastHeartbeatAt   DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
+  project           Project         @relation(fields: [projectId], references: [id])
+  requester         User            @relation(fields: [requestedById], references: [id])
+  ledgers           BillingLedger[]
+  @@index([tenantId, status, createdAt])
+  @@index([projectId])
+  @@index([status, lastHeartbeatAt])
+}

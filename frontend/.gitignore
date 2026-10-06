@@ -4,3 +4,7 @@ pnpm-lock.yaml
 yarn.lock
 dist
 .DS_Store
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
+.env

@@ -1,18 +1,38 @@
 import axios from "axios";
-import { toast } from "react-hot-toast";
 
-const api = axios.create({
-  // @ts-ignore
+export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || "/api",
-  timeout: 10000
+  timeout: 15000
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("user-center:token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    toast.error(error?.response?.data?.message ?? "网络请求超时，请稍后重试");
+    if (error.response?.status === 401) {
+      localStorage.removeItem("user-center:token");
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
+    }
     return Promise.reject(error);
   }
 );
 
-export default api;
+export function getApiErrorMessage(error: unknown, fallback = "请求失败，请稍后重试"): string {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.message || error.message || fallback;
+  }
+  return fallback;
+}
+
+export function downloadWithAuth(url: string) {
+  return api.get(url.replace(/^\/api/, ""), { responseType: "blob" });
+}

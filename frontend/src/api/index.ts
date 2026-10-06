@@ -1,2 +1,2 @@
 export * from "./client";
-export * from "./park";
+export * from "./workspace";

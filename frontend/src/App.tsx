@@ -1,27 +1,76 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import Layout from "./components/Layout";
-import AudioVisual from "./pages/AudioVisual";
-import Timeline from "./pages/Timeline";
-import ParkOverview from "./pages/ParkOverview";
-import ErrorBoundary from "./components/ErrorBoundary";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedLayout from "@/components/ProtectedLayout";
+import LoginPage from "@/components/pages/LoginPage";
+import DashboardPage from "@/components/pages/DashboardPage";
+import ProjectsPage from "@/components/pages/ProjectsPage";
+import TemplatesPage from "@/components/pages/TemplatesPage";
+import ExportsPage from "@/components/pages/ExportsPage";
+import BillingPage from "@/components/pages/BillingPage";
+import SettingsPage from "@/components/pages/SettingsPage";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
-const App = () => {
-  return (
-    <BrowserRouter>
+const App = () => (
+  <BrowserRouter>
+    <AuthProvider>
       <ErrorBoundary>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<ParkOverview />} />
-            <Route path="/audiovisual" element={<AudioVisual />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          <Toaster position="top-right" />
-        </Layout>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/"
+            element={(
+              <ProtectedLayout>
+                <DashboardPage />
+              </ProtectedLayout>
+            )}
+          />
+          <Route
+            path="/projects"
+            element={(
+              <ProtectedLayout>
+                <ProjectsPage />
+              </ProtectedLayout>
+            )}
+          />
+          <Route
+            path="/templates"
+            element={(
+              <ProtectedLayout>
+                <TemplatesPage />
+              </ProtectedLayout>
+            )}
+          />
+          <Route
+            path="/exports"
+            element={(
+              <ProtectedLayout>
+                <ExportsPage />
+              </ProtectedLayout>
+            )}
+          />
+          <Route
+            path="/billing"
+            element={(
+              <ProtectedLayout>
+                <BillingPage />
+              </ProtectedLayout>
+            )}
+          />
+          <Route
+            path="/settings"
+            element={(
+              <ProtectedLayout>
+                <SettingsPage />
+              </ProtectedLayout>
+            )}
+          />
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+        <Toaster position="top-right" toastOptions={{ duration: 4500 }} />
       </ErrorBoundary>
-    </BrowserRouter>
-  );
-};
+    </AuthProvider>
+  </BrowserRouter>
+);
 
 export default App;
